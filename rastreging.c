@@ -8,7 +8,11 @@
 //using namespace std;
 
 #define POP_SIZE 4
-#define ITERATIONS 100
+#define IND_SIZE 32
+#define STEP 64 
+// bits = log STEP
+// dom intervale limit = pow (2, ind_size/2 - bits ) /2  
+#define ITERATIONS 1000
 
 float res = 0;
 
@@ -23,20 +27,23 @@ float res = 0;
 // size = 2000
 // 2^11 = 2048
 
-void evaluate(float p[]);
+
+// size * 2 x,y,
+// valor real = bitstring - size/2
+
 void generatePopulation();
-void cruiceBestPop(float p[]); 
+void evaluate();
+void cruiceBestPop(); 
 void mutateInd(); // 1 in a Thousand or more; low prob. 
 void imprimir_poblacion();
 
 //https://towardsdatascience.com/introduction-to-genetic-algorithms-including-example-code-e396e98d8bf3
 
 
-
 struct Individuo
 {
 	//size_t ind_size;
-	char genes[11];
+	char genes[IND_SIZE];
 };
 
 
@@ -44,10 +51,11 @@ struct Individuo
 
 // individuo poblacion inicial
 
-size_t ind_size = 12;
+
 
 struct Individuo pop[POP_SIZE]; 
-
+int fittest = 0; 
+int secondFittest = 0; 
 
 
 int main()
@@ -66,7 +74,7 @@ first = malloc( 2 * sizeof(float));
 first[0] = (float)(rand() & 0xFF) / 10.0f;
 first[1] = (float)(rand() & 0xFF) / 10.0f; 
 
-evaluate(first);
+evaluate();
 
 imprimir_poblacion();
 
@@ -83,7 +91,7 @@ void generatePopulation(){
 	int s;
 	for (int j = 0; j < POP_SIZE; j++)
 	{	
-		for (int i = 0; i < ind_size; i++)
+		for (int i = 0; i < IND_SIZE; i++)
 		{
 			s = rand()%2;
 			pop[j].genes[i] = (char)s;
@@ -95,21 +103,38 @@ void generatePopulation(){
 
 }
 
-void evaluate(float p[])
+
+//res+= (p[i]*p[i]) - (10 * cos(p[i])) + 10;
+void evaluate()
 {
-for (int i = 0; i<2; i++)
-	res+= (p[i]*p[i]) - (10 * cos(p[i])) + 10;
-{
-}
-printf("%.2f %.2f\n", p[0], p[1]);
-printf(" f: %.2f\n", res);
+	double fit_val = 0.0; 
+	for (int j = 0; j < POP_SIZE; j++)
+	{
+		double aux_X = 0.0;
+		double aux_Y = 0.0;
+		// 6 = log2 (step = 64)
+		for (int i = 0; i < IND_SIZE/2; i++)
+		{
+			aux_X += pop[j].genes[i]*pow(2 , ((IND_SIZE/2)-i)-1); 
+
+		}
+		aux_X = (aux_X/STEP) - pow(2,(IND_SIZE/2)-6)/2;
+		for (int i = IND_SIZE/2; i < IND_SIZE; i++)
+		{
+			aux_Y += pop[j].genes[i]*pow(2 , (IND_SIZE-i)-1); 
+
+		}
+		aux_Y = (aux_Y/STEP) - pow(2,(IND_SIZE/2)-6)/2;
+		printf("Ind X%d, vale %f\n", j+1, aux_X);
+		printf("Ind Y%d, vale %f\n", j+1, aux_Y);
+	}
 }
 
 void imprimir_poblacion()
 {
 	for (int j = 0; j < POP_SIZE; j++)
 	{
-		for (int i = 0; i < ind_size; i++)
+		for (int i = 0; i < IND_SIZE; i++)
 		{
 			printf("%d", pop[j].genes[i]);
 		}
