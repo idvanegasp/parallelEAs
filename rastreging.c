@@ -74,6 +74,14 @@ first = malloc( 2 * sizeof(float));
 first[0] = (float)(rand() & 0xFF) / 10.0f;
 first[1] = (float)(rand() & 0xFF) / 10.0f; 
 
+/*
+Function SET evaluation chooser
+
+int fn;
+scanf("%d", &fn);
+*/
+
+
 evaluate();
 
 imprimir_poblacion();
@@ -130,6 +138,19 @@ void evaluate()
 	}
 }
 
+
+void mutate()
+{
+	int k = rand()% (IND_SIZE/2) ;
+	for ( int i = 0; i <= k; i++)
+	{
+		// exchange rows
+	}
+	for ( int i = IND_SIZE/2; i <= (IND_SIZE/2)+k; i++)
+	{
+
+	}
+}
 void imprimir_poblacion()
 {
 	for (int j = 0; j < POP_SIZE; j++)
