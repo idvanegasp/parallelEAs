@@ -7,12 +7,12 @@
 
 //using namespace std;
 
-#define POP_SIZE 4
+#define POP_SIZE 16
 #define IND_SIZE 32
 #define STEP 64 
 // bits = log STEP
 // dom intervale limit = pow (2, ind_size/2 - bits ) /2  
-#define ITERATIONS 100
+#define ITERATIONS 10000
 
 float res = 0;
 
@@ -34,7 +34,7 @@ float res = 0;
 void generatePopulation();
 void evaluate();
 void cruce(); 
-void mutateInd(); // 1 in a Thousand or more; low prob. 
+void mutate(); // 1 in a Thousand or more; low prob. 
 void imprimir_poblacion();
 
 //https://towardsdatascience.com/introduction-to-genetic-algorithms-including-example-code-e396e98d8bf3
@@ -56,7 +56,7 @@ struct Individuo
 struct Individuo pop[POP_SIZE]; 
 int fittest = 0; 
 int secondFittest = 0; 
-
+int mutate_var = 0; // no booleans on C :0
 
 int main()
 {
@@ -72,7 +72,9 @@ for (int i = 0; i<ITERATIONS; i++)
 evaluate();
 cruce();
 printf("\nLa poblacion %d es\n", i+1);
+if (mutate_var) mutate();
 imprimir_poblacion();
+evaluate(); // final sol
 }
 
 
@@ -101,11 +103,11 @@ first[1] = (float)(rand() & 0xFF) / 10.0f;
 
 void generatePopulation(){
 
-	strcpy( pop[0].genes, "\0");
-	strcpy( pop[1].genes, "\0");
-	strcpy( pop[2].genes, "\0");
-	strcpy( pop[3].genes, "\0");
-	int s;
+	for (int i = 0; i<POP_SIZE; i++)
+	{
+		strcpy( pop[i].genes, "\0");
+	}
+	int s; // random bit
 	for (int j = 0; j < POP_SIZE; j++)
 	{	
 		for (int i = 0; i < IND_SIZE; i++)
@@ -121,18 +123,20 @@ void generatePopulation(){
 }
 
 
-//res+= (p[i]*p[i]) - (10 * cos(p[i])) + 10;
+//res+= (p[i]*p[i]) - (10 * cos(p[i])) + 10; rastreging
 void evaluate()
 {
 
 	double fit_val = 0.0; 
-	float aux_fittest[4];
+	float aux_fittest[POP_SIZE];
+	
 	for (int j = 0; j < POP_SIZE; j++)
 	{	res = 0.0;
 		
 		double aux_X = 0.0;
 		double aux_Y = 0.0;
-		// 6 = log2 (step = 64)
+		// 6 = log2 (step = 64) 
+		// dos bloques altamente paralelizables
 		for (int i = 0; i < IND_SIZE/2; i++)
 		{
 			aux_X += pop[j].genes[i]*pow(2 , ((IND_SIZE/2)-i)-1); 
@@ -152,7 +156,7 @@ void evaluate()
 		printf("X%d : %f, Y%d : %f; f%d = %f\n", j+1,aux_X, j+1, aux_Y, j+1, res);
 		
 		
-//		aux_fittest[j] = res; 
+		aux_fittest[j] = res; 
 	}
 
 	int aux_fit_1 = 0;
@@ -173,7 +177,7 @@ void evaluate()
 		}
 	}	
 	secondFittest = aux_fit_2;
-	
+	if(abs(aux_fittest[aux_fit_1]-aux_fittest[aux_fit_2]) < 0.1) mutate_var = 1;
 	printf("El individuo minimo es %d y el segundo %d\n", fittest+1, secondFittest+1);
 }
 
@@ -198,28 +202,31 @@ void cruce()
 
 	// crea los dos nuevos individuos del offspring y actualiza la poblacion
 	struct Individuo new_pop[POP_SIZE]; 
-	strcpy( new_pop[0].genes, "\0");
-	strcpy( new_pop[1].genes, "\0");
-	strcpy( new_pop[2].genes, "\0");
-	strcpy( new_pop[3].genes, "\0");
+	for (int i = 0; i<POP_SIZE; i++)
+	{
+		strcpy( new_pop[i].genes, "\0");
+	}
 
-	for (int i = 0; i < IND_SIZE; i++)
+// crea nueva poblacion
+	for (int j = 0; j<POP_SIZE; j+=2)
+	{
+		for (int i = 0; i < IND_SIZE; i++)
 		{
-			new_pop[0].genes[i] = pop[fittest].genes[i];
-			new_pop[1].genes[i] = pop[secondFittest].genes[i];
+			new_pop[j].genes[i] = aux_ind_1[i];
+			new_pop[j+1].genes[i] = aux_ind_2[i];
 		}
-
-	for (int i = s+1; i < IND_SIZE; i++)
-	{
-		pop[fittest].genes[i] = aux_ind_2[i];
-		pop[secondFittest].genes[i] = aux_ind_1[i];
 	}
-	for (int i = 0; i < IND_SIZE; i++)
+// actualiza la info de los hijos
+	for (int j = 2; j<POP_SIZE; j+=2)
 	{
-			new_pop[2].genes[i] = pop[fittest].genes[i];
-			new_pop[3].genes[i] = pop[secondFittest].genes[i];
-
+		s = rand()%IND_SIZE;
+		for (int i = s+1; i < IND_SIZE; i++)
+		{
+			new_pop[j].genes[i] = aux_ind_2[i];
+			new_pop[j+1].genes[i] = aux_ind_1[i];
+		}
 	}
+	
 /*
 	for (int j = 0; j < POP_SIZE; j++)
 	{
@@ -237,15 +244,25 @@ void cruce()
 
 void mutate()
 {
-	int k = rand()% (IND_SIZE/2) ;
-	for ( int i = 0; i <= k; i++)
+	for ( int i = 1; i < POP_SIZE; i++)
 	{
+		int mut = rand()%2;
+		if (mut)
+		{
+			int k = rand()%IND_SIZE ;
+			if(pop[i].genes[k]%2==1)
+			{
+				pop[i].genes[k] = 0;
+				printf("Muta Ind%d cromosoma%d\n", i+1, k+1);
+			}else pop[i].genes[k] = 1;
+		}
 		// exchange rows
 	}
-	for ( int i = IND_SIZE/2; i <= (IND_SIZE/2)+k; i++)
+/*	for ( int i = IND_SIZE/2; i <= (IND_SIZE/2)+k; i++)
 	{
 
 	}
+*/
 }
 void imprimir_individuo(int k)
 {
